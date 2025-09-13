@@ -1,19 +1,27 @@
 // routes/profile.js
 const express = require("express");
 const router = express.Router();
-const supabase = require("../utils/supabase");
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();   // ✅ initialize Prisma
 const authenticateTenant = require("../middleware/authenticateTenant");
 
 // GET /shopify/profile
 router.get("/", authenticateTenant, async (req, res) => {
   try {
-    const { data: tenant, error } = await supabase
-      .from("tenants")
-      .select("id, name, api_key, created_at")
-      .eq("id", req.tenant.id)
-      .single();
+    const tenant = await prisma.tenants.findUnique({
+      where: { id: req.tenant.id },
+      select: {
+        id: true,
+        name: true,
+        api_key: true,
+        created_at: true,
+      },
+    });
 
-    if (error) throw error;
+    if (!tenant) {
+      return res.status(404).json({ error: "Tenant not found" });
+    }
+
     res.json(tenant);
   } catch (err) {
     console.error("❌ Error fetching tenant profile:", err);
@@ -27,14 +35,13 @@ router.post("/api-key", authenticateTenant, async (req, res) => {
   if (!api_key) return res.status(400).json({ error: "API key required" });
 
   try {
-    const { data, error } = await supabase
-      .from("tenants")
-      .update({ api_key })
-      .eq("id", req.tenant.id)
-      .select("id, api_key");
+    const tenant = await prisma.tenants.update({
+      where: { id: req.tenant.id },
+      data: { api_key },
+      select: { id: true, api_key: true },
+    });
 
-    if (error) throw error;
-    res.json({ message: "API key updated", api_key: data[0].api_key });
+    res.json({ message: "API key updated", api_key: tenant.api_key });
   } catch (err) {
     console.error("❌ Error updating API key:", err);
     res.status(500).json({ error: err.message });

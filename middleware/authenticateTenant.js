@@ -5,7 +5,7 @@ async function authenticateTenant(req, res, next) {
   if (!authHeader) return res.status(401).send('❌ Authorization required');
 
   const token = authHeader.split(' ')[1];
-  console.log('🔑 Received token:', token);
+  // console.log('🔑 Received token:', token);
 
   const { data: tenant, error } = await supabase
     .from('tenants')
