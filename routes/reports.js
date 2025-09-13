@@ -174,14 +174,22 @@ router.get("/top-products", authenticateTenant, async (req, res) => {
   const tenantId = req.tenant.id;
 
   try {
+    // 1. Get all order_items for this tenant
     const orderItems = await prisma.order_items.findMany({
       where: { tenant_id: tenantId },
       select: { product_id: true, quantity: true },
     });
 
+    // 2. Aggregate quantities safely (handle null qty)
     const productMap = {};
-    orderItems.forEach(item => (productMap[item.product_id] = (productMap[item.product_id] || 0) + item.quantity));
+    orderItems.forEach(item => {
+      if (!item.product_id) return; // skip if null
+      const qty = item.quantity ?? 0;
+      const pid = item.product_id.toString(); // normalize as string
+      productMap[pid] = (productMap[pid] || 0) + qty;
+    });
 
+    // 3. Top 5 products
     const top5 = Object.entries(productMap)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
@@ -189,13 +197,18 @@ router.get("/top-products", authenticateTenant, async (req, res) => {
 
     if (!top5.length) return res.json([]);
 
+    // 4. Fetch product titles for this tenant only
     const products = await prisma.products.findMany({
-      where: { id: { in: top5.map(p => Number(p.product_id)) } },
+      where: {
+        tenant_id: tenantId,
+        id: { in: top5.map(p => BigInt(p.product_id)) },
+      },
       select: { id: true, title: true },
     });
 
+    // 5. Merge product names
     const result = top5.map(p => {
-      const prod = products.find(pr => pr.id === Number(p.product_id));
+      const prod = products.find(pr => pr.id.toString() === p.product_id);
       return { ...p, title: prod?.title || "Unknown" };
     });
 
@@ -204,5 +217,6 @@ router.get("/top-products", authenticateTenant, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 module.exports = router;
