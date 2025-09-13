@@ -19,11 +19,7 @@ app.use(cors({
 }));
 
 // Webhooks need raw body, so mount with express.raw()
-app.use(
-  "/webhooks",
-  express.raw({ type: "application/json" }),
-  webhooksRouter
-);
+app.use('/webhooks', webhooksRouter); 
 
 app.use(express.json());
 
