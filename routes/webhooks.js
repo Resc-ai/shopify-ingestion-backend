@@ -17,28 +17,40 @@ function verifyShopifyWebhook(req) {
 }
 
 // Use express.raw for Shopify webhook routes
+// Order webhook
 router.post(
   '/shopify/orders_create',
   express.raw({ type: 'application/json' }),
   async (req, res) => {
+    console.log('🚀 /orders_create webhook hit');
+
     try {
-      if (!verifyShopifyWebhook(req)) return res.status(401).send('Invalid HMAC');
+      console.log('Headers:', req.headers);
+
+      if (!verifyShopifyWebhook(req)) {
+        console.warn('❌ Invalid HMAC for orders_create');
+        return res.status(401).send('Invalid HMAC');
+      }
+      console.log('✅ HMAC verified');
 
       const order = JSON.parse(req.body.toString('utf8'));
+      console.log('Payload:', order);
+
       const shop = req.headers['x-shopify-shop-domain'];
+      const tenant = await prisma.tenants.findFirst({ where: { shopify_store_url: shop } });
 
-      const tenant = await prisma.tenants.findFirst({
-        where: { shopify_store_url: shop },
-      });
+      if (!tenant) {
+        console.warn(`❌ Tenant not found for shop ${shop}`);
+        return res.status(404).send('Tenant not found');
+      }
+      console.log('Tenant found:', tenant.id);
 
-      if (!tenant) return res.status(404).send('Tenant not found');
-
-      // Save order using Prisma-based service
-      await saveOrders([order], tenant.id);
+      await saveOrders([order], tenant.id); // Prisma service
+      console.log('✅ Order saved');
 
       res.status(200).send('OK');
     } catch (err) {
-      console.error('Webhook error', err);
+      console.error('Webhook error (orders_create):', err);
       res.status(500).send('err');
     }
   }
@@ -48,16 +60,39 @@ router.post(
   '/shopify/customers_create',
   express.raw({ type: 'application/json' }),
   async (req, res) => {
-    if (!verifyShopifyWebhook(req)) return res.status(401).send('Invalid HMAC');
-    const customer = JSON.parse(req.body.toString('utf8'));
-    const shop = req.headers['x-shopify-shop-domain'];
-    const tenant = await prisma.tenants.findFirst({ where: { shopify_store_url: shop } });
-    if (!tenant) return res.status(404).send('Tenant not found');
-    await saveCustomers([customer], tenant.id); // Prisma service
-    res.status(200).send('OK');
+    console.log('🚀 /customers_create webhook hit');
+
+    try {
+      console.log('Headers:', req.headers);
+
+      if (!verifyShopifyWebhook(req)) {
+        console.warn('❌ Invalid HMAC for customers_create');
+        return res.status(401).send('Invalid HMAC');
+      }
+      console.log('✅ HMAC verified');
+
+      const customer = JSON.parse(req.body.toString('utf8'));
+      console.log('Payload:', customer);
+
+      const shop = req.headers['x-shopify-shop-domain'];
+      const tenant = await prisma.tenants.findFirst({ where: { shopify_store_url: shop } });
+
+      if (!tenant) {
+        console.warn(`❌ Tenant not found for shop ${shop}`);
+        return res.status(404).send('Tenant not found');
+      }
+      console.log('Tenant found:', tenant.id);
+
+      await saveCustomers([customer], tenant.id); // Prisma service
+      console.log('✅ Customer saved');
+
+      res.status(200).send('OK');
+    } catch (err) {
+      console.error('Webhook error (customers_create):', err);
+      res.status(500).send('err');
+    }
   }
 );
-
 // Product webhook
 router.post(
   '/shopify/products_create',
