@@ -17,9 +17,8 @@ model customers {
   tags       String?
   created_at DateTime? @db.Timestamp(6)
   updated_at DateTime? @db.Timestamp(6)
-
-  tenants tenants? @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  orders  orders[]
+  tenants    tenants?  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  orders     orders[]
 }
 
 model order_items {
@@ -29,12 +28,10 @@ model order_items {
   quantity   Int?
   price      Decimal?  @db.Decimal
   tenant_id  String?   @db.Uuid
+  orders     orders?   @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  products   products? @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenants    tenants?  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  orders   orders?   @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  products products? @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  tenants  tenants?  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  // Composite unique constraints from SQL
   @@unique([order_id, product_id], map: "order_items_order_product_unique")
   @@unique([order_id, product_id], map: "unique_order_product")
 }
@@ -51,10 +48,9 @@ model orders {
   processed_at     DateTime?     @db.Timestamp(6)
   created_at       DateTime?     @db.Timestamp(6)
   updated_at       DateTime?     @db.Timestamp(6)
-
-  order_items order_items[]
-  customers   customers? @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  tenants     tenants?   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  order_items      order_items[]
+  customers        customers?    @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenants          tenants?      @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
 }
 
 model products {
@@ -67,9 +63,8 @@ model products {
   price        Decimal?      @db.Decimal
   created_at   DateTime?     @db.Timestamp(6)
   updated_at   DateTime?     @db.Timestamp(6)
-
-  order_items order_items[]
-  tenants     tenants? @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  order_items  order_items[]
+  tenants      tenants?      @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
 }
 
 model tenants {
@@ -81,9 +76,8 @@ model tenants {
   shopify_store_url    String?
   shopify_access_token String?
   last_synced_at       DateTime?     @db.Timestamptz(6)
-
-  customers   customers[]
-  order_items order_items[]
-  orders      orders[]
-  products    products[]
+  customers            customers[]
+  order_items          order_items[]
+  orders               orders[]
+  products             products[]
 }

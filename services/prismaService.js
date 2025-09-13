@@ -1,4 +1,4 @@
-const { PrismaClient } = require("@prisma/client");
+const { PrismaClient, Prisma } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 // --------------------- CUSTOMERS ---------------------
@@ -61,6 +61,7 @@ async function saveProducts(products, tenantId) {
     });
   }
   console.log(`✅ Saved ${products.length} products`);
+
 }
 
 // --------------------- ORDERS + ORDER ITEMS ---------------------
@@ -70,13 +71,13 @@ async function saveOrders(orders, tenantId) {
   for (let o of orders) {
     // Upsert order
     await prisma.orders.upsert({
-      where: { id: o.id },
+      where: { id: BigInt(o.id) },
       update: {
         tenant_id: tenantId,
-        customer_id: o.customer?.id || null,
+        customer_id: o.customer?.id ? BigInt(o.customer.id) : null,
         order_number: o.order_number,
         email: o.email,
-        total_price: o.total_price,
+        total_price: o.total_price ? new Prisma.Decimal(o.total_price) : null,
         currency: o.currency,
         financial_status: o.financial_status,
         processed_at: o.processed_at ? new Date(o.processed_at) : null,
@@ -84,12 +85,12 @@ async function saveOrders(orders, tenantId) {
         updated_at: o.updated_at ? new Date(o.updated_at) : null,
       },
       create: {
-        id: o.id,
+        id: BigInt(o.id),
         tenant_id: tenantId,
-        customer_id: o.customer?.id || null,
+        customer_id: o.customer?.id ? BigInt(o.customer.id) : null,
         order_number: o.order_number,
         email: o.email,
-        total_price: o.total_price,
+        total_price: o.total_price ? new Prisma.Decimal(o.total_price) : null,
         currency: o.currency,
         financial_status: o.financial_status,
         processed_at: o.processed_at ? new Date(o.processed_at) : null,
@@ -110,37 +111,38 @@ async function saveOrders(orders, tenantId) {
       let product = null;
       if (item.product_id) {
         product = await prisma.products.findUnique({
-          where: { id: item.product_id },
+          where: { id: BigInt(item.product_id) },
           select: { title: true },
         });
       }
 
       await prisma.order_items.upsert({
-        where: {
-          order_id_product_id: {
-            order_id: o.id,
-            product_id: item.product_id,
-          }, // ✅ composite unique key
-        },
-        update: {
-          tenant_id: tenantId,
-          quantity: item.quantity,
-          price: item.price,
-          title: product?.title || "N/A", // include title
-        },
-        create: {
-          order_id: o.id,
-          product_id: item.product_id,
-          tenant_id: tenantId,
-          quantity: item.quantity,
-          price: item.price,
-          title: product?.title || "N/A", // include title
-        },
-      });
+  where: {
+    order_id_product_id: {
+      order_id: BigInt(o.id),
+      product_id: BigInt(item.product_id),
+    },
+  },
+  update: {
+    quantity: item.quantity,
+    price: new Prisma.Decimal(item.price),
+    tenants: { connect: { id: tenantId } },
+    orders: { connect: { id: BigInt(o.id) } },
+    products: { connect: { id: BigInt(item.product_id) } },
+  },
+  create: {
+    quantity: item.quantity,
+    price: new Prisma.Decimal(item.price),
+    tenants: { connect: { id: tenantId } },
+    orders: { connect: { id: BigInt(o.id) } },
+    products: { connect: { id: BigInt(item.product_id) } },
+  },
+});
+
+
     }
   }
 
   console.log(`✅ Inserted/updated ${orders.length} orders with items`);
 }
-
 module.exports = { saveCustomers, saveProducts, saveOrders };
