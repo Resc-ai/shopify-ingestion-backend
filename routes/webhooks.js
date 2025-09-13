@@ -27,7 +27,7 @@ router.post(
       const order = JSON.parse(req.body.toString('utf8'));
       const shop = req.headers['x-shopify-shop-domain'];
 
-      const tenant = await prisma.tenants.findUnique({
+      const tenant = await prisma.tenants.findFirst({
         where: { shopify_store_url: shop },
       });
 
@@ -51,7 +51,7 @@ router.post(
     if (!verifyShopifyWebhook(req)) return res.status(401).send('Invalid HMAC');
     const customer = JSON.parse(req.body.toString('utf8'));
     const shop = req.headers['x-shopify-shop-domain'];
-    const tenant = await prisma.tenants.findUnique({ where: { shopify_store_url: shop } });
+    const tenant = await prisma.tenants.findFirst({ where: { shopify_store_url: shop } });
     if (!tenant) return res.status(404).send('Tenant not found');
     await saveCustomers([customer], tenant.id); // Prisma service
     res.status(200).send('OK');
@@ -66,7 +66,7 @@ router.post(
     if (!verifyShopifyWebhook(req)) return res.status(401).send('Invalid HMAC');
     const product = JSON.parse(req.body.toString('utf8'));
     const shop = req.headers['x-shopify-shop-domain'];
-    const tenant = await prisma.tenants.findUnique({ where: { shopify_store_url: shop } });
+    const tenant = await prisma.tenants.findFirst({ where: { shopify_store_url: shop } });
     if (!tenant) return res.status(404).send('Tenant not found');
     await saveProducts([product], tenant.id); // Prisma service
     res.status(200).send('OK');
@@ -84,7 +84,7 @@ router.post(
       const checkout = JSON.parse(req.body.toString('utf8'));
       const shop = req.headers['x-shopify-shop-domain'];
 
-      const tenant = await prisma.tenants.findUnique({
+      const tenant = await prisma.tenants.findFirst({
         where: { shopify_store_url: shop },
       });
 
