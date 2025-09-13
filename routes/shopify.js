@@ -50,7 +50,7 @@ router.get("/orders", async (req, res) => {
       include: {
         order_items: {
           include: {
-            product: {  // assuming order_items has a relation 'product'
+            products: {  // assuming order_items has a relation 'product'
               select: { title: true }
             }
           }
