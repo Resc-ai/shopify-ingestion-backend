@@ -29,7 +29,6 @@ model order_items {
   quantity   Int?
   price      Decimal?  @db.Decimal
   tenant_id  String?   @db.Uuid
-  title      String? 
 
   orders   orders?   @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   products products? @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
