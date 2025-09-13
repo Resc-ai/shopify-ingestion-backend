@@ -47,14 +47,15 @@ router.get("/products", async (req, res) => {
 router.get("/orders", async (req, res) => {
   try {
     const orders = await prisma.orders.findMany({
-      where: { tenant_id: req.tenant.id },
       include: {
         order_items: {
           include: {
-            products: true,
-          },
-        },
-      },
+            product: {  // assuming order_items has a relation 'product'
+              select: { title: true }
+            }
+          }
+        }
+      }
     });
     res.json(orders);
   } catch (err) {
