@@ -100,18 +100,36 @@ router.post("/sync", async (req, res) => {
 router.get('/checkouts', async (req, res) => {
   try {
     const tenantId = req.tenant.id;
+    console.log(tenantId)
 
     if (!tenantId) return res.status(400).send('Missing tenantId');
 
     const checkouts = await prisma.checkouts.findMany({
-      where: { tenant_id: Number(tenantId) },
+      where: { tenant_id: tenantId },
       orderBy: { created_at: 'desc' },
     });
-
+    console.log(checkouts);
     res.json(checkouts);
   } catch (err) {
     console.error(err);
     res.status(500).send('Error fetching checkouts');
+  }
+});
+
+router.get('/checkouts/abandoned', async (req, res) => {
+  try {
+    const tenantId = req.tenant.id;
+    if (!tenantId) return res.status(400).send('Missing tenantId');
+
+    const abandoned = await prisma.checkouts.findMany({
+      where: { tenant_id: tenantId, status: "abandoned" },
+      orderBy: { created_at: "desc" },
+    });
+
+    res.json(abandoned);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error fetching abandoned checkouts');
   }
 });
 

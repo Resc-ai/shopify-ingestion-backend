@@ -74,6 +74,7 @@ model tenants {
   api_key              String        @unique
   created_at           DateTime?     @default(now()) @db.Timestamp(6)
   email                String?
+  password             String? 
   shopify_store_url    String?
   shopify_access_token String?
   last_synced_at       DateTime?     @db.Timestamptz(6)
@@ -92,5 +93,8 @@ model checkouts {
   total_price String?
   created_at  DateTime @db.Timestamp(6)
   items       Json
+  status      String   @default("abandoned") // can be "abandoned" or "completed"
+
   tenants     tenants? @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: Restrict)
 }
+
