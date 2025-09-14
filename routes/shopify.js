@@ -97,4 +97,23 @@ router.post("/sync", async (req, res) => {
   }
 });
 
+router.get('/checkouts', async (req, res) => {
+  try {
+    const tenantId = req.tenant.id;
+
+    if (!tenantId) return res.status(400).send('Missing tenantId');
+
+    const checkouts = await prisma.checkouts.findMany({
+      where: { tenant_id: Number(tenantId) },
+      orderBy: { created_at: 'desc' },
+    });
+
+    res.json(checkouts);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error fetching checkouts');
+  }
+});
+
+
 module.exports = router;
