@@ -114,18 +114,33 @@ router.post(
   express.raw({ type: 'application/json' }),
   async (req, res) => {
     try {
-      if (!verifyShopifyWebhook(req)) return res.status(401).send('Invalid HMAC');
+      console.log('✅ Webhook hit: /shopify/checkouts_create');
+      console.log('👉 Headers:', req.headers);
+      console.log('👉 Raw body:', req.body?.toString('utf8'));
+
+      if (!verifyShopifyWebhook(req)) {
+        console.warn('❌ Invalid HMAC signature');
+        return res.status(401).send('Invalid HMAC');
+      }
+      console.log('✅ HMAC verified');
 
       const checkout = JSON.parse(req.body.toString('utf8'));
+      console.log('✅ Parsed checkout payload:', checkout);
+
       const shop = req.headers['x-shopify-shop-domain'];
+      console.log('👉 Shopify shop domain:', shop);
 
       const tenant = await prisma.tenants.findFirst({
         where: { shopify_store_url: shop },
       });
 
-      if (!tenant) return res.status(404).send('Tenant not found');
+      if (!tenant) {
+        console.warn(`❌ No tenant found for shop: ${shop}`);
+        return res.status(404).send('Tenant not found');
+      }
+      console.log('✅ Tenant found:', tenant.id);
 
-      // Save checkout data in Prisma (ensure you have a checkouts model in schema)
+      // Save checkout data
       await prisma.checkouts.create({
         data: {
           tenant_id: tenant.id,
@@ -133,16 +148,18 @@ router.post(
           email: checkout.email,
           total_price: checkout.total_price,
           created_at: new Date(checkout.created_at),
-          items: checkout.line_items, // store JSON directly
+          items: checkout.line_items, // stored as JSON
         },
       });
 
+      console.log(`✅ Checkout ${checkout.id} saved for tenant ${tenant.id}`);
       res.status(200).send('OK');
     } catch (err) {
-      console.error('Checkout webhook error', err);
+      console.error('❌ Checkout webhook error:', err);
       res.status(500).send('err');
     }
   }
 );
+
 
 module.exports = router;
