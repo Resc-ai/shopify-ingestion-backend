@@ -76,37 +76,56 @@ router.get("/summary", authenticateTenant, async (req, res) => {
   }
 });
 
-// 2️⃣ Revenue forecast using regression
+const axios = require("axios");
+
 router.get("/revenue-forecast", authenticateTenant, async (req, res) => {
   try {
     const tenantId = req.tenant.id;
+
+    // Fetch orders
     const orders = await prisma.orders.findMany({
       where: { tenant_id: tenantId },
       select: { processed_at: true, total_price: true },
     });
 
+    // Group daily revenue
     const grouped = {};
-    orders.forEach(row => {
+    orders.forEach((row) => {
       const d = row.processed_at.toISOString().split("T")[0];
       grouped[d] = (grouped[d] || 0) + parseFloat(row.total_price || 0);
     });
 
     const sortedDates = Object.keys(grouped).sort();
-    const series = sortedDates.map((date, i) => [i, grouped[date]]);
-    const result = regression.linear(series);
 
-    const forecast = [];
-    for (let i = 0; i < series.length + 7; i++) {
-      const [x, y] = result.predict(i);
-      forecast.push({ date: i < sortedDates.length ? sortedDates[i] : `Day ${i - series.length + 1}`, revenue: y });
-    }
+    const actual = sortedDates.map((date) => ({
+      date,
+      revenue: grouped[date],
+      type: "actual",
+    }));
 
-    res.json({ actual: series, forecast });
+    const series = sortedDates.map((date) => ({
+      date,
+      revenue: grouped[date],
+    }));
+
+    // Call Python SARIMA Service
+    const response = await axios.post("https://devesh-mishra13-sarima-revenue-forecast.hf.space/forecast", { series });
+
+    const forecast = response.data.forecast.map((f) => ({
+      date: f.date,
+      revenue: f.revenue,
+      type: "forecast",
+    }));
+
+    res.json({ actual, forecast });
   } catch (err) {
     console.error("Forecast error:", err);
     res.status(500).send("Error generating forecast");
   }
 });
+
+
+
 
 // 3️⃣ Orders over time
 router.get("/orders-over-time", authenticateTenant, async (req, res) => {
