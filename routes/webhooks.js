@@ -140,15 +140,14 @@ router.post(
       }
       console.log('✅ Tenant found:', tenant.id);
 
-      // Save checkout data
       await prisma.checkouts.create({
         data: {
           tenant_id: tenant.id,
-          checkout_id: checkout.id,
+          checkout_id: checkout.id.toString(), // convert int → string
           email: checkout.email,
           total_price: checkout.total_price,
           created_at: new Date(checkout.created_at),
-          items: checkout.line_items, // stored as JSON
+          items: checkout.line_items, // assuming this column is JSON in your schema
         },
       });
 
